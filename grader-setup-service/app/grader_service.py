@@ -57,6 +57,7 @@ class GraderServiceLauncher:
             resources=client.V1ResourceRequirements(
                 requests={"cpu": "100m", "memory": "200Mi"}, limits={"cpu": "500m", "memory": "500Mi"}
             ),
+            security_context=client.V1SecurityContext(allow_privilege_escalation=False),
             env=[
                 client.V1EnvVar(name='JUPYTERHUB_SERVICE_NAME', value=self.course_id),
                 client.V1EnvVar(name='JUPYTERHUB_API_TOKEN', value=grader_token),
@@ -74,7 +75,10 @@ class GraderServiceLauncher:
         # Create and configurate a spec section
         template = client.V1PodTemplateSpec(
             metadata=client.V1ObjectMeta(labels={'app': f'grader-notebook-{self.course_id}'}),
-            spec=client.V1PodSpec(containers=[container]),
+            spec=client.V1PodSpec(
+                containers=[container],
+                security_context=client.V1PodSecurityContext(run_as_user=0)
+            )
         )
         # Create the specification of deployment
         spec = client.V1DeploymentSpec(
