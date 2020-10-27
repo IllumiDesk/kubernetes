@@ -8,7 +8,7 @@ from kubernetes.config import ConfigException
 
 DEPLOYMENT_NAME_TEMPLATE = 'grader-deployment-{0}'
 NAMESPACE = 'default'
-KUBE_CONFIG_FILE = os.environ.get('KUBE_CONFIG_FILE')
+GRADER_IMAGE_NAME = os.environ.get('GRADER_IMAGE_NAME', 'illumidesk/grader-notebook:latest')
 
 
 class GraderServiceLauncher:
@@ -18,7 +18,8 @@ class GraderServiceLauncher:
             # Configs can be set in Configuration class directly or using helper utility
             config.load_incluster_config()
         except ConfigException:
-            config.load_kube_config(config_file=KUBE_CONFIG_FILE)
+            # next method uses the KUBECONFIG env var by default
+            config.load_kube_config()
         # Uncomment the following lines to enable debug logging
         # c = client.Configuration()
         # c.debug = True
@@ -50,7 +51,7 @@ class GraderServiceLauncher:
         # Configureate Pod template container
         container = client.V1Container(
             name='grader-notebook',
-            image='illumidesk/grader-notebook:latest',
+            image=GRADER_IMAGE_NAME,
             command=['start-notebook.sh', f'--group=formgrade-{self.course_id}'],
             ports=[client.V1ContainerPort(container_port=8888)],
             resources=client.V1ResourceRequirements(
@@ -85,41 +86,3 @@ class GraderServiceLauncher:
         )
 
         return deployment
-
-
-class KubernetesApiClient:
-    def __init__(self):
-        # load
-        try:
-            config.load_incluster_config()
-        except ConfigException:
-            config.load_kube_config()
-
-        self.configuration = client.Configuration()
-
-    def create_job_object(self, job_name, container_image, args):
-        volume_name = ""  # volume inside of which you put your service account
-        google_app_credentials_path = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS')
-        volume_mount = client.V1VolumeMount(
-            mount_path='/'.join(google_app_credentials_path.split('/')[:-1]), name=volume_name
-        )
-
-        env = client.V1EnvVar(name='GOOGLE_APPLICATION_CREDENTIALS', value=google_app_credentials_path)
-        container = client.V1Container(
-            name=job_name,
-            image=container_image,
-            args=args,
-            volume_mounts=[volume_mount],
-            env=[env],
-            image_pull_policy="Always",
-        )
-
-        volume = client.V1Volume(
-            name=volume_name,
-            secret=client.V1SecretVolumeSource(secret_name='<secret-where-you-put-the-service-account>'),
-        )
-
-        template = client.V1PodTemplateSpec(
-            metadata=client.V1ObjectMeta(labels={"app": "sample"}),
-            spec=client.V1PodSpec(restart_policy="Never", containers=[container], volumes=[volume]),
-        )
