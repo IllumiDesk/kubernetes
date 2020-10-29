@@ -10,7 +10,7 @@ from .grader_service import GraderServiceLauncher
 app = create_app()
 
 
-@app.route("/services/<org_name>/<course_id>", methods=['POST'])
+@app.route('/services/<org_name>/<course_id>', methods=['POST'])
 def launch(org_name: str, course_id: str):
     """
     Creates a new grader-notebook pod if not exists
@@ -32,7 +32,7 @@ def launch(org_name: str, course_id: str):
         return jsonify(success=False, message=f'A grader service already exists for this course_id:{course_id}'), 409
 
 
-@app.route("/services", methods=["GET"])
+@app.route('/services', methods=['GET'])
 def services():
     """
     Returns the grader-notebook list used as services in jhub
@@ -62,6 +62,15 @@ def services():
         groups_resp.update({f'formgrade-{s.course_id}': f'grader-{s.course_id}'})
     return jsonify(services=services_resp, groups=groups_resp)
 
+
+@app.route("/services/<course_id>", methods=['DELETE'])
+def services_deletion(course_id):
+    launcher = GraderServiceLauncher(course_id=course_id)
+    launcher.delete_grader_deployment()
+    service_saved = GraderService.query.filter_by(course_id=course_id).first()
+    db.session.delete(service_saved)
+    db.session.commit()
+    return jsonify(success=True)
 
 @app.route("/healthcheck")
 def healthcheck():

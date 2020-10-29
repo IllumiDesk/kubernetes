@@ -31,7 +31,7 @@ class GraderServiceLauncher:
 
     def grader_deployment_exists(self) -> bool:
         """
-        Check if there is a deployment for the grader service name        
+        Check if there is a deployment for the grader service name
         """
         # Filter deployments by the current namespace and a specific name (metadata collection)
         deployment_list = self.apps_v1.list_namespaced_deployment(
@@ -114,3 +114,15 @@ class GraderServiceLauncher:
         )
 
         return deployment
+
+    def delete_grader_deployment(self):
+        try:
+            self.coreV1Api.delete_namespaced_service(name=self.grader_name, namespace=NAMESPACE)
+        except:
+            # maybe the objects not exist
+            pass
+        try:
+            self.apps_v1.delete_namespaced_deployment(name=self.grader_name, namespace=NAMESPACE)
+        except:
+            # maybe the objects not exist
+            pass
