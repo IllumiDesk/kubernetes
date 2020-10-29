@@ -64,6 +64,7 @@ class GraderServiceLauncher:
                 client.V1EnvVar(name='JUPYTERHUB_API_URL', value='http://hub:8081/hub/api'),
                 client.V1EnvVar(name='JUPYTERHUB_BASE_URL', value='/'),
                 client.V1EnvVar(name='JUPYTERHUB_SERVICE_PREFIX', value=f'/services/{self.course_id}'),
+                client.V1EnvVar(name='JUPYTERHUB_CLIENT_ID', value=f'service-{self.course_id}'),
                 client.V1EnvVar(name='JUPYTERHUB_USER', value=self.grader_name),
                 client.V1EnvVar(name='NB_GRADER_UID', value='10001'),
                 client.V1EnvVar(name='NB_GID', value='100'),
