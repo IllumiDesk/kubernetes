@@ -66,12 +66,15 @@ def services():
 @app.route("/services/<course_id>", methods=['DELETE'])
 def services_deletion(course_id):
     launcher = GraderServiceLauncher(course_id=course_id)
-    launcher.delete_grader_deployment()
-    service_saved = GraderService.query.filter_by(course_id=course_id).first()
-    if service_saved:
-        db.session.delete(service_saved)
-        db.session.commit()
-    return jsonify(success=True)
+    try:
+        launcher.delete_grader_deployment()
+        service_saved = GraderService.query.filter_by(course_id=course_id).first()
+        if service_saved:
+            db.session.delete(service_saved)
+            db.session.commit()
+        return jsonify(success=True)
+    except Exception as e:
+        return jsonify(success=False, error=str(e)), 500
 
 
 @app.route("/healthcheck")
