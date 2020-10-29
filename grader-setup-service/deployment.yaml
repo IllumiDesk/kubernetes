@@ -7,9 +7,10 @@ metadata:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
+  name: grader-setup-service
   labels:
-    app.kubernetes.io/name: gradersetup
-  name: gradersetup
+    app: illumidesk
+    component: grader-setup-service
 rules:
   - apiGroups:
      - ""
@@ -47,13 +48,14 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
+  name: grader-setup-service
   labels:
-    app.kubernetes.io/name: gradersetup
-  name: gradersetup
+    app: illumidesk
+    component: grader-setup-service
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: gradersetup
+  name: grader-setup-service
 subjects:
   - kind: ServiceAccount
     name: illumidesk-account
@@ -62,7 +64,7 @@ subjects:
 apiVersion: v1
 kind: Service
 metadata:
-  name: gradersetup
+  name: grader-setup-service
 spec:
   type: ClusterIP
   ports:
@@ -70,29 +72,31 @@ spec:
       targetPort: 8000
       protocol: TCP
   selector:
-    app: gradersetup
+    component: grader-setup-service
 --- 
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: gradersetup
+  name: grader-setup-service
   labels:
-    app: gradersetup
+    app: illumidesk
+    component: grader-setup-service
 spec:
   selector:
     matchLabels:
-      app: gradersetup
+      component: grader-setup-service
   replicas: 1
   strategy:
     type: Recreate
   template:
     metadata:
       labels:
-        app: gradersetup
+        app: illumidesk
+        component: grader-setup-service
     spec:
       terminationGracePeriodSeconds: 10
       containers:
-        - name: gradersetup-container
+        - name: grader-setup-container
           image: netoisc/grader-setup-app
           imagePullPolicy: Always
           ports:
