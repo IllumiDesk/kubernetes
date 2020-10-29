@@ -10,8 +10,11 @@ from .grader_service import GraderServiceLauncher
 app = create_app()
 
 
-@app.route("/<org_name>/<course_id>/launch")
+@app.route("/services/<org_name>/<course_id>", methods=['POST'])
 def launch(org_name: str, course_id: str):
+    """
+    Creates a new grader-notebook pod if not exists
+    """
     launcher = GraderServiceLauncher(course_id=course_id)
     if not launcher.grader_deployment_exists():
         launcher.create_grader_deployment()
@@ -26,13 +29,38 @@ def launch(org_name: str, course_id: str):
 
         return jsonify(success=True)
     else:
-        return jsonify(success=False, message="A grader service already exists"), 409
+        return jsonify(success=False, message=f'A grader service already exists for this course_id:{course_id}'), 409
 
 
 @app.route("/services", methods=["GET"])
 def services():
+    """
+    Returns the grader-notebook list used as services in jhub
+
+    Response: json
+    example:
+    ```
+    {
+        services: [{"name":"<course-id", "url": "http://grader-<course-id>:8888"...}],
+        groups: {"formgrade-<course-id>": ["grader-<course-id>"] }
+    }
+    ```
+    """
     services = GraderService.query.all()
-    return jsonify(services)
+    # format a json
+    services_resp = []
+    groups_resp = {}
+    for s in services:
+        services_resp.append({
+            'name': s.name,
+            'url': s.url,
+            'oauth_no_confirm': s.oauth_no_confirm,
+            'admin': s.admin,
+            'api_token': s.api_token
+        })
+        # add the jhub user group
+        groups_resp.update({f'formgrade-{s.course_id}': f'grader-{s.course_id}'})
+    return jsonify(services=services_resp, groups=groups_resp)
 
 
 @app.route("/healthcheck")

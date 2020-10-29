@@ -78,6 +78,8 @@ class GraderServiceLauncher:
             env=[
                 client.V1EnvVar(name='JUPYTERHUB_SERVICE_NAME', value=self.course_id),
                 client.V1EnvVar(name='JUPYTERHUB_API_TOKEN', value=self.grader_token),
+                # we're using the K8s Service name 'hub' (defined in the jhub helm chart) 
+                # to connect from our grader-notebooks
                 client.V1EnvVar(name='JUPYTERHUB_API_URL', value='http://hub:8081/hub/api'),
                 client.V1EnvVar(name='JUPYTERHUB_BASE_URL', value='/'),
                 client.V1EnvVar(name='JUPYTERHUB_SERVICE_PREFIX', value=f'/services/{self.course_id}'),
