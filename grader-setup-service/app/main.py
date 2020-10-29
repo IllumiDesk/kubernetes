@@ -59,7 +59,7 @@ def services():
             'api_token': s.api_token
         })
         # add the jhub user group
-        groups_resp.update({f'formgrade-{s.course_id}': [f'grader-{s.course_id}'}])
+        groups_resp.update({f'formgrade-{s.course_id}': [f'grader-{s.course_id}']})
     return jsonify(services=services_resp, groups=groups_resp)
 
 
