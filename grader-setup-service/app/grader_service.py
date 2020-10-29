@@ -45,6 +45,20 @@ class GraderServiceLauncher:
         deployment = self._create_deployment_object()
         api_response = self.apps_v1.create_namespaced_deployment(body=deployment, namespace=NAMESPACE)
         print("Deployment created. status='%s'" % str(api_response.status))
+        service = self._create_service_object()
+        self.apps_v1.create_namespaced_service(namespace=NAMESPACE, body=service)
+    
+    def _create_service_object(self):
+        service = client.V1Service(
+            kind='Service',
+            metadata=client.V1ObjectMeta(name=f'grader-notebook-{self.course_id}'),            
+            spec=client.V1ServiceSpec(
+                type='ClusterIP',
+                ports=[client.V1ServicePort(port=8888, target_port=8888, protocol='TCP')],
+                selector={'app': f'grader-notebook-{self.course_id}'}
+            )
+        )
+        return service
 
     def _create_deployment_object(self):
         grader_token = token_hex(32)
