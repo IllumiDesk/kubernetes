@@ -72,6 +72,7 @@ def services_deletion(course_id):
     db.session.commit()
     return jsonify(success=True)
 
+
 @app.route("/healthcheck")
 def healthcheck():
     return jsonify(success=True)
