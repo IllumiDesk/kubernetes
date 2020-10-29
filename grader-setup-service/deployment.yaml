@@ -94,6 +94,10 @@ spec:
       containers:
         - name: gradersetup-container
           image: netoisc/grader-setup-app
+          imagePullPolicy: Always
           ports:
             - containerPort: 8000
+          env:
+            - name: GRADER_IMAGE_NAME
+              value: 'illumidesk/grader-notebook:latest'
       serviceAccountName: illumidesk-account
