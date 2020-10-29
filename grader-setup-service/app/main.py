@@ -59,7 +59,7 @@ def services():
             'api_token': s.api_token
         })
         # add the jhub user group
-        groups_resp.update({f'formgrade-{s.course_id}': f'grader-{s.course_id}'})
+        groups_resp.update({f'formgrade-{s.course_id}': [f'grader-{s.course_id}'}])
     return jsonify(services=services_resp, groups=groups_resp)
 
 
@@ -68,8 +68,9 @@ def services_deletion(course_id):
     launcher = GraderServiceLauncher(course_id=course_id)
     launcher.delete_grader_deployment()
     service_saved = GraderService.query.filter_by(course_id=course_id).first()
-    db.session.delete(service_saved)
-    db.session.commit()
+    if service_saved:
+        db.session.delete(service_saved)
+        db.session.commit()
     return jsonify(success=True)
 
 
