@@ -1,9 +1,18 @@
+import logging
 import os
-from secrets import token_hex
+import shutil
+import sys
 
 from kubernetes import client
 from kubernetes import config
 from kubernetes.config import ConfigException
+
+from pathlib import Path
+from secrets import token_hex
+
+
+logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 
 NAMESPACE = 'default'
@@ -11,7 +20,7 @@ GRADER_IMAGE_NAME = os.environ.get('GRADER_IMAGE_NAME', 'illumidesk/grader-noteb
 
 
 class GraderServiceLauncher:
-    def __init__(self, course_id: str):
+    def __init__(self, org_name: str, course_id: str):
         # try to load the cluster credentials
         try:
             # Configs can be set in Configuration class directly or using helper utility
@@ -26,6 +35,7 @@ class GraderServiceLauncher:
         self.apps_v1 = client.AppsV1Api()
         self.coreV1Api = client.CoreV1Api()
         self.course_id = course_id
+        self.org_name = org_name
         self.grader_name = f'grader-{self.course_id}'
         self.grader_token = token_hex(32)
 
@@ -65,7 +75,28 @@ class GraderServiceLauncher:
         # Create grader service
         service = self._create_service_object()
         self.coreV1Api.create_namespaced_service(namespace=NAMESPACE, body=service)
-    
+        # create the home directories for grader/course
+
+    def _create_grader_directories(self):
+        """
+        Creates home directories with specific permissions
+        Directories to create:
+        - grader_root: /<org-name>/home/grader-<course-id>
+        - course_root: /<org-name>/home/grader-<course-id>/<course-id>
+        """
+        course_root = Path(f'/{self.org_name}/home/grader-{self.course_id}/{self.course_id}')
+        uid = 10001
+        gid = 100
+        logger.debug(
+            f'Create course directory "{course_root}" with special permissions {uid}:{gid}'
+        )
+        course_root.mkdir(parents=True, exist_ok=True)
+        # change the course directory owner
+        shutil.chown(str(course_root), user=uid, group=gid)
+        # change the grader-home directory owner
+        shutil.chown(str(course_root.parent), user=uid, group=gid)
+
+
     def _create_service_object(self):
         service = client.V1Service(
             kind='Service',
@@ -104,7 +135,8 @@ class GraderServiceLauncher:
                 client.V1EnvVar(name='NB_USER', value=self.grader_name),
                 # todo: validate if this env var is still required
                 client.V1EnvVar(name='USER_ROLE', value='Grader'),
-            ]
+            ],
+            volume_mounts=[client.V1VolumeMount(mount_path=f'/{self.org_name}/home/{self.grader_name}', name='grader-setup-pvc')]
         )
         # Create and configurate a spec section
         template = client.V1PodTemplateSpec(
@@ -115,7 +147,8 @@ class GraderServiceLauncher:
             ),
             spec=client.V1PodSpec(
                 containers=[container],
-                security_context=client.V1PodSecurityContext(run_as_user=0)
+                security_context=client.V1PodSecurityContext(run_as_user=0),
+                volumes=[client.V1Volume(name='grader-setup-pvc', persistent_volume_claim='grader-setup-pvc')]
             )
         )
         # Create the specification of deployment
