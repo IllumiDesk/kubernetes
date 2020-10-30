@@ -15,7 +15,7 @@ def launch(org_name: str, course_id: str):
     """
     Creates a new grader-notebook pod if not exists
     """
-    launcher = GraderServiceLauncher(course_id=course_id)
+    launcher = GraderServiceLauncher(org_name=org_name, course_id=course_id)
     if not launcher.grader_deployment_exists():
         launcher.create_grader_deployment()
         new_service = GraderService(
@@ -63,9 +63,9 @@ def services():
     return jsonify(services=services_resp, groups=groups_resp)
 
 
-@app.route("/services/<course_id>", methods=['DELETE'])
-def services_deletion(course_id):
-    launcher = GraderServiceLauncher(course_id=course_id)
+@app.route("/services/<org_name>/<course_id>", methods=['DELETE'])
+def services_deletion(org_name: str, course_id: str):
+    launcher = GraderServiceLauncher(org_name=org_name, course_id=course_id)
     try:
         launcher.delete_grader_deployment()
         service_saved = GraderService.query.filter_by(course_id=course_id).first()
