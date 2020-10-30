@@ -76,6 +76,7 @@ class GraderServiceLauncher:
         service = self._create_service_object()
         self.coreV1Api.create_namespaced_service(namespace=NAMESPACE, body=service)
         # create the home directories for grader/course
+        self._create_grader_directories()
 
     def _create_grader_directories(self):
         """
@@ -84,7 +85,7 @@ class GraderServiceLauncher:
         - grader_root: /<org-name>/home/grader-<course-id>
         - course_root: /<org-name>/home/grader-<course-id>/<course-id>
         """
-        course_root = Path('/illumidesk-courses', f'/{self.org_name}/home/grader-{self.course_id}/{self.course_id}')
+        course_root = Path(f'/illumidesk-courses/{self.org_name}/home/grader-{self.course_id}/{self.course_id}')
         uid = 10001
         gid = 100
         logger.debug(
