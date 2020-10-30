@@ -84,7 +84,7 @@ class GraderServiceLauncher:
         - grader_root: /<org-name>/home/grader-<course-id>
         - course_root: /<org-name>/home/grader-<course-id>/<course-id>
         """
-        course_root = Path(f'/{self.org_name}/home/grader-{self.course_id}/{self.course_id}')
+        course_root = Path('/illumidesk-courses', f'/{self.org_name}/home/grader-{self.course_id}/{self.course_id}')
         uid = 10001
         gid = 100
         logger.debug(
@@ -116,6 +116,7 @@ class GraderServiceLauncher:
             image=GRADER_IMAGE_NAME,
             command=['start-notebook.sh', f'--group=formgrade-{self.course_id}'],
             ports=[client.V1ContainerPort(container_port=8888)],
+            working_dir=f'/home/{self.grader_name}',
             resources=client.V1ResourceRequirements(
                 requests={"cpu": "100m", "memory": "200Mi"}, limits={"cpu": "500m", "memory": "500Mi"}
             ),
@@ -136,7 +137,12 @@ class GraderServiceLauncher:
                 # todo: validate if this env var is still required
                 client.V1EnvVar(name='USER_ROLE', value='Grader'),
             ],
-            volume_mounts=[client.V1VolumeMount(mount_path=f'/{self.org_name}/home/{self.grader_name}', name='grader-setup-pvc')]
+            volume_mounts=[client.V1VolumeMount(
+                    mount_path=f'/home/{self.grader_name}',
+                    name='grader-setup-pvc',
+                    sub_path=f'illumidesk-courses/{self.org_name}'
+                )
+            ]
         )
         # Create and configurate a spec section
         template = client.V1PodTemplateSpec(
@@ -148,7 +154,10 @@ class GraderServiceLauncher:
             spec=client.V1PodSpec(
                 containers=[container],
                 security_context=client.V1PodSecurityContext(run_as_user=0),
-                volumes=[client.V1Volume(name='grader-setup-pvc', persistent_volume_claim='grader-setup-pvc')]
+                volumes=[client.V1Volume(
+                    name='grader-setup-pvc',
+                    persistent_volume_claim=client.V1PersistentVolumeClaimVolumeSource(claim_name='grader-setup-pvc')
+                )]
             )
         )
         # Create the specification of deployment
