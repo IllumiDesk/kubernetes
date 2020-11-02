@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 NAMESPACE = 'default'
 GRADER_IMAGE_NAME = os.environ.get('GRADER_IMAGE_NAME', 'illumidesk/grader-notebook:latest')
+MNT_ROOT = os.environ.get('ILLUMIDESK_MNT_ROOT', 'illumidesk-courses')
 
 
 class GraderServiceLauncher:
@@ -38,6 +39,8 @@ class GraderServiceLauncher:
         self.org_name = org_name
         self.grader_name = f'grader-{self.course_id}'
         self.grader_token = token_hex(32)
+        # Course home directory, its parent should be the grader name
+        self.course_dir = Path(f'/{MNT_ROOT}/{self.org_name}/home/grader-{self.course_id}/{self.course_id}')
 
     def grader_deployment_exists(self) -> bool:
         """
@@ -85,17 +88,16 @@ class GraderServiceLauncher:
         - grader_root: /<org-name>/home/grader-<course-id>
         - course_root: /<org-name>/home/grader-<course-id>/<course-id>
         """
-        course_root = Path(f'/illumidesk-courses/{self.org_name}/home/grader-{self.course_id}/{self.course_id}')
         uid = 10001
         gid = 100
         logger.debug(
-            f'Create course directory "{course_root}" with special permissions {uid}:{gid}'
+            f'Create course directory "{self.course_dir}" with special permissions {uid}:{gid}'
         )
-        course_root.mkdir(parents=True, exist_ok=True)
+        self.course_dir.mkdir(parents=True, exist_ok=True)
         # change the course directory owner
-        shutil.chown(str(course_root), user=uid, group=gid)
+        shutil.chown(str(self.course_dir), user=uid, group=gid)
         # change the grader-home directory owner
-        shutil.chown(str(course_root.parent), user=uid, group=gid)
+        shutil.chown(str(self.course_dir.parent), user=uid, group=gid)
 
 
     def _create_service_object(self):
@@ -141,7 +143,7 @@ class GraderServiceLauncher:
             volume_mounts=[client.V1VolumeMount(
                     mount_path=f'/home/{self.grader_name}',
                     name='grader-setup-pvc',
-                    sub_path=f'illumidesk-courses/{self.org_name}'
+                    sub_path=f'{MNT_ROOT}/{self.org_name}/home/grader-{self.course_id}/'
                 )
             ]
         )
