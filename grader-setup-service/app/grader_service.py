@@ -79,16 +79,22 @@ class GraderServiceLauncher:
         return False
 
     def create_grader_deployment(self):
+        # first create the home directories for grader/course
+        try:
+            self._create_grader_directories()
+            self._create_nbgrader_files()
+        except Exception as e:
+            msg = 'An error occurred trying to create directories and files for nbgrader.'
+            logger.error(f'{msg}{e}')
+            raise Exception(msg)
+            
         # Create grader deployement
         deployment = self._create_deployment_object()
         api_response = self.apps_v1.create_namespaced_deployment(body=deployment, namespace=NAMESPACE)
-        print("Deployment created. status='%s'" % str(api_response.status))
+        logger.info("Deployment created. status='%s'" % str(api_response.status))
         # Create grader service
         service = self._create_service_object()
         self.coreV1Api.create_namespaced_service(namespace=NAMESPACE, body=service)
-        # create the home directories for grader/course
-        self._create_grader_directories()
-        self._create_nbgrader_files()
 
     def _create_grader_directories(self):
         """
@@ -130,7 +136,7 @@ class GraderServiceLauncher:
         course_home_nbconfig_content = NBGRADER_COURSE_CONFIG_TEMPLATE.format(
             course_id=self.course_id
         )
-        course_home_nbconfig.write_text(course_home_nbconfig_content)
+        course_nbconfig_path.write_text(course_home_nbconfig_content)
 
     def _create_service_object(self):
         service = client.V1Service(
