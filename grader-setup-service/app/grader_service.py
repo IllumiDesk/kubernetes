@@ -10,6 +10,7 @@ from kubernetes.config import ConfigException
 from pathlib import Path
 from secrets import token_hex
 from .constants import NBGRADER_HOME_CONFIG_TEMPLATE
+from .constants import NBGRADER_COURSE_CONFIG_TEMPLATE
 
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
@@ -111,7 +112,7 @@ class GraderServiceLauncher:
         # create the .jupyter directory (a child of grader_root)
         jupyter_dir = self.course_dir.parent.joinpath('.jupyter')
         jupyter_dir.mkdir(parents=True, exist_ok=True)
-        shutil.chown(str(jupyter_dir), user=self.uid, group=self.gid)
+        shutil.chown(str(jupyter_dir), user=10001, group=100)
         # Write the nbgrader_config.py file at grader home directory
         grader_nbconfig_path = jupyter_dir.joinpath('nbgrader_config.py')
         logger.info(f'Writing the nbgrader_config.py file at jupyter directory (within the grader home): {grader_nbconfig_path}')
@@ -126,12 +127,10 @@ class GraderServiceLauncher:
         course_nbconfig_path = self.course_dir.joinpath('nbgrader_config.py')
         logger.info(f'Writing the nbgrader_config.py file at course home directory: {course_nbconfig_path}')
         # write the file
-        course_home_nbconfig_content = NBGRADER_HOME_CONFIG_TEMPLATE.format(
+        course_home_nbconfig_content = NBGRADER_COURSE_CONFIG_TEMPLATE.format(
             course_id=self.course_id
         )
         course_home_nbconfig.write_text(course_home_nbconfig_content)
-        
-
 
     def _create_service_object(self):
         service = client.V1Service(
