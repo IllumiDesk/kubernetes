@@ -9,6 +9,7 @@ from kubernetes.config import ConfigException
 
 from pathlib import Path
 from secrets import token_hex
+from .constants import NBGRADER_HOME_CONFIG_TEMPLATE
 
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
@@ -18,6 +19,12 @@ logger = logging.getLogger(__name__)
 NAMESPACE = 'default'
 GRADER_IMAGE_NAME = os.environ.get('GRADER_IMAGE_NAME', 'illumidesk/grader-notebook:latest')
 MNT_ROOT = os.environ.get('ILLUMIDESK_MNT_ROOT', 'illumidesk-courses')
+
+
+# NBGrader DATABASE settings
+nbgrader_db_host = os.environ.get('POSTGRES_NBGRADER_HOST')
+nbgrader_db_password = os.environ.get('POSTGRES_NBGRADER_PASSWORD')
+nbgrader_db_user = os.environ.get('POSTGRES_NBGRADER_USER')
 
 
 class GraderServiceLauncher:
@@ -80,6 +87,7 @@ class GraderServiceLauncher:
         self.coreV1Api.create_namespaced_service(namespace=NAMESPACE, body=service)
         # create the home directories for grader/course
         self._create_grader_directories()
+        self._create_nbgrader_files()
 
     def _create_grader_directories(self):
         """
@@ -98,6 +106,31 @@ class GraderServiceLauncher:
         shutil.chown(str(self.course_dir), user=uid, group=gid)
         # change the grader-home directory owner
         shutil.chown(str(self.course_dir.parent), user=uid, group=gid)
+    
+    def _create_nbgrader_files(self):
+        # create the .jupyter directory (a child of grader_root)
+        jupyter_dir = self.course_dir.parent.joinpath('.jupyter')
+        jupyter_dir.mkdir(parents=True, exist_ok=True)
+        shutil.chown(str(jupyter_dir), user=self.uid, group=self.gid)
+        # Write the nbgrader_config.py file at grader home directory
+        grader_nbconfig_path = jupyter_dir.joinpath('nbgrader_config.py')
+        logger.info(f'Writing the nbgrader_config.py file at jupyter directory (within the grader home): {grader_nbconfig_path}')
+        # write the file
+        grader_home_nbconfig_content = NBGRADER_HOME_CONFIG_TEMPLATE.format(
+            grader_name=self.grader_name,
+            course_id=self.course_id,
+            db_url=f'postgresql://{nbgrader_db_user}:{nbgrader_db_password}@{nbgrader_db_host}:5432/{self.org_name}_{self.course_id}'
+        )
+        grader_nbconfig_path.write_text(grader_home_nbconfig_content)
+        # Write the nbgrader_config.py file at grader home directory
+        course_nbconfig_path = self.course_dir.joinpath('nbgrader_config.py')
+        logger.info(f'Writing the nbgrader_config.py file at course home directory: {course_nbconfig_path}')
+        # write the file
+        course_home_nbconfig_content = NBGRADER_HOME_CONFIG_TEMPLATE.format(
+            course_id=self.course_id
+        )
+        course_home_nbconfig.write_text(course_home_nbconfig_content)
+        
 
 
     def _create_service_object(self):
