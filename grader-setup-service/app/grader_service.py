@@ -3,6 +3,8 @@ import os
 import shutil
 import sys
 
+from datetime import datetime
+
 from kubernetes import client
 from kubernetes import config
 from kubernetes.config import ConfigException
@@ -219,3 +221,25 @@ class GraderServiceLauncher:
         # then delete the deployment
         if self.grader_deployment_exists():
             self.apps_v1.delete_namespaced_deployment(name=self.grader_name, namespace=NAMESPACE)
+
+    def update_jhub_deployment(self):
+        jhub_deployments = self.apps_v1.list_namespaced_deployment(
+            namespace=NAMESPACE,
+            label_selector='component=hub'
+        )
+        if jhub_deployments.items:
+            # add new label with timestamp (only used to the replacement occurs)
+            for deployment in jhub_deployments.items:
+                current_metadata = deployment.metadata
+                current_labels = current_metadata.labels
+                # add the timestamp
+                current_labels.update({'restarted_at': datetime.now().strftime('%m_%d_%Y_%H_%M_%S')})
+                current_metadata.labels = current_labels
+                # update the deployment object
+                deployment.metatada = current_metadata
+                api_response = self.apps_v1.patch_namespaced_deployment(
+                    name='hub',
+                    namespace=NAMESPACE,
+                    body=deployment
+                )
+                logger.info(f'Jhub patch response:{api_response}')
