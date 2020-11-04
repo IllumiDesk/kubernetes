@@ -17,15 +17,19 @@ def launch(org_name: str, course_id: str):
     """
     launcher = GraderServiceLauncher(org_name=org_name, course_id=course_id)
     if not launcher.grader_deployment_exists():
-        launcher.create_grader_deployment()
-        new_service = GraderService(
-            name=course_id,
-            course_id=course_id,
-            url=f'http://{launcher.grader_name}:8888',
-            api_token=launcher.grader_token
-        )
-        db.session.add(new_service)
-        db.session.commit()
+        try:
+            launcher.create_grader_deployment()
+            launcher.update_jhub_deployment()
+            new_service = GraderService(
+                name=course_id,
+                course_id=course_id,
+                url=f'http://{launcher.grader_name}:8888',
+                api_token=launcher.grader_token
+            )
+            db.session.add(new_service)
+            db.session.commit()
+        except Exception as e:
+            return jsonify(success=False, message=str(e)), 500
 
         return jsonify(success=True)
     else:
