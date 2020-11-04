@@ -228,15 +228,16 @@ class GraderServiceLauncher:
             label_selector='component=hub'
         )
         if jhub_deployments.items:
-            # add new label with timestamp (only used to the replacement occurs)
+            # add new label with the current datetime (only used to the replacement occurs)
             for deployment in jhub_deployments.items:
-                current_metadata = deployment.metadata
+                # get the jhub deployment template
+                current_metadata = deployment.spec.template.metadata
                 current_labels = current_metadata.labels
-                # add the timestamp
+                # add the label
                 current_labels.update({'restarted_at': datetime.now().strftime('%m_%d_%Y_%H_%M_%S')})
                 current_metadata.labels = current_labels
                 # update the deployment object
-                deployment.metatada = current_metadata
+                deployment.spec.template.metatada = current_metadata
                 api_response = self.apps_v1.patch_namespaced_deployment(
                     name='hub',
                     namespace=NAMESPACE,

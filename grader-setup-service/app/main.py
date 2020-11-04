@@ -19,7 +19,7 @@ def launch(org_name: str, course_id: str):
     if not launcher.grader_deployment_exists():
         try:
             launcher.create_grader_deployment()
-            launcher.update_jhub_deployment()
+            # Register the new service to local database
             new_service = GraderService(
                 name=course_id,
                 course_id=course_id,
@@ -28,6 +28,9 @@ def launch(org_name: str, course_id: str):
             )
             db.session.add(new_service)
             db.session.commit()
+            # then do patch for jhub deployment
+            # with this the jhub pod will be restarted and get/load new services
+            launcher.update_jhub_deployment()
         except Exception as e:
             return jsonify(success=False, message=str(e)), 500
 
