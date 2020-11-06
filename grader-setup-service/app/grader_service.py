@@ -21,7 +21,8 @@ logger = logging.getLogger(__name__)
 
 NAMESPACE = 'default'
 GRADER_IMAGE_NAME = os.environ.get('GRADER_IMAGE_NAME', 'illumidesk/grader-notebook:latest')
-MNT_ROOT = os.environ.get('ILLUMIDESK_MNT_ROOT', 'illumidesk-courses')
+MNT_ROOT = os.environ.get('ILLUMIDESK_MNT_ROOT', '/illumidesk-courses')
+EXCHANGE_MNT_ROOT = os.environ.get('ILLUMIDESK_NB_EXCHANGE_MNT_ROOT', '/illumidesk-nb-exchange')
 
 
 # NBGrader DATABASE settings
@@ -50,7 +51,9 @@ class GraderServiceLauncher:
         self.grader_name = f'grader-{self.course_id}'
         self.grader_token = token_hex(32)
         # Course home directory, its parent should be the grader name
-        self.course_dir = Path(f'/{MNT_ROOT}/{self.org_name}/home/grader-{self.course_id}/{self.course_id}')
+        self.course_dir = Path(f'{MNT_ROOT}/{self.org_name}/home/grader-{self.course_id}/{self.course_id}')
+        # set the exchange directory path
+        self.exchange_dir = Path(EXCHANGE_MNT_ROOT, self.org_name, 'exchange')
 
     def grader_deployment_exists(self) -> bool:
         """
@@ -83,6 +86,7 @@ class GraderServiceLauncher:
     def create_grader_deployment(self):
         # first create the home directories for grader/course
         try:
+            self._create_exchange_directory()
             self._create_grader_directories()
             self._create_nbgrader_files()
         except Exception as e:
@@ -93,10 +97,16 @@ class GraderServiceLauncher:
         # Create grader deployement
         deployment = self._create_deployment_object()
         api_response = self.apps_v1.create_namespaced_deployment(body=deployment, namespace=NAMESPACE)
-        logger.info("Deployment created. status='%s'" % str(api_response.status))
+        logger.info(f'Deployment created. Status="{str(api_response.status)}"')
         # Create grader service
         service = self._create_service_object()
         self.coreV1Api.create_namespaced_service(namespace=NAMESPACE, body=service)
+
+    def _create_exchange_directory(self):
+        
+        logger.info(f'Creating exchange directory {self.exchange_dir}')
+        self.exchange_dir.mkdir(parents=True, exist_ok=True)
+        self.exchange_dir.chmod(0o777)
 
     def _create_grader_directories(self):
         """
@@ -134,7 +144,7 @@ class GraderServiceLauncher:
         # Write the nbgrader_config.py file at grader home directory
         course_nbconfig_path = self.course_dir.joinpath('nbgrader_config.py')
         logger.info(f'Writing the nbgrader_config.py file at course home directory: {course_nbconfig_path}')
-        # write the file
+        # write the second file
         course_home_nbconfig_content = NBGRADER_COURSE_CONFIG_TEMPLATE.format(
             course_id=self.course_id
         )
@@ -154,6 +164,10 @@ class GraderServiceLauncher:
 
     def _create_deployment_object(self):        
         # Configureate Pod template container
+        # Volumes to mount as subPaths of PV
+        sub_path_grader_home = str(self.course_dir.parent).strip('/')
+        sub_path_exchange = str(self.exchange_dir.relative_to(EXCHANGE_MNT_ROOT))
+        # define the container to launch
         container = client.V1Container(
             name='grader-notebook',
             image=GRADER_IMAGE_NAME,
@@ -171,7 +185,7 @@ class GraderServiceLauncher:
                 # to connect from our grader-notebooks
                 client.V1EnvVar(name='JUPYTERHUB_API_URL', value='http://hub:8081/hub/api'),
                 client.V1EnvVar(name='JUPYTERHUB_BASE_URL', value='/'),
-                client.V1EnvVar(name='JUPYTERHUB_SERVICE_PREFIX', value=f'/services/{self.course_id}'),
+                client.V1EnvVar(name='JUPYTERHUB_SERVICE_PREFIX', value=f'/services/{self.course_id}/'),
                 client.V1EnvVar(name='JUPYTERHUB_CLIENT_ID', value=f'service-{self.course_id}'),
                 client.V1EnvVar(name='JUPYTERHUB_USER', value=self.grader_name),
                 client.V1EnvVar(name='NB_GRADER_UID', value='10001'),
@@ -180,10 +194,16 @@ class GraderServiceLauncher:
                 # todo: validate if this env var is still required
                 client.V1EnvVar(name='USER_ROLE', value='Grader'),
             ],
-            volume_mounts=[client.V1VolumeMount(
+            volume_mounts=[
+                client.V1VolumeMount(
                     mount_path=f'/home/{self.grader_name}',
                     name='grader-setup-pvc',
-                    sub_path=f'{MNT_ROOT}/{self.org_name}/home/grader-{self.course_id}/'
+                    sub_path=sub_path_grader_home
+                ),
+                client.V1VolumeMount(
+                    mount_path='/srv/nbgrader/exchange',
+                    name='illumidesk-shared',
+                    sub_path=sub_path_exchange
                 )
             ]
         )
@@ -197,10 +217,17 @@ class GraderServiceLauncher:
             spec=client.V1PodSpec(
                 containers=[container],
                 security_context=client.V1PodSecurityContext(run_as_user=0),
-                volumes=[client.V1Volume(
-                    name='grader-setup-pvc',
-                    persistent_volume_claim=client.V1PersistentVolumeClaimVolumeSource(claim_name='grader-setup-pvc')
-                )]
+                volumes=[
+                    client.V1Volume(
+                        name='grader-setup-pvc',
+                        persistent_volume_claim=client.V1PersistentVolumeClaimVolumeSource(claim_name='grader-setup-pvc')
+                    ),
+                    client.V1Volume(
+                        name='illumidesk-shared',
+                        persistent_volume_claim=client.V1PersistentVolumeClaimVolumeSource(claim_name='exchange-shared-volume')
+                    ),
+                    
+                ]
             )
         )
         # Create the specification of deployment

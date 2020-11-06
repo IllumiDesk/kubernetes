@@ -1,0 +1,7 @@
+persistence:
+  enabled: true
+  storageClass: "local-path"
+  size: 10Gi
+
+storageClass:
+  defaultClass: false

@@ -124,8 +124,13 @@ spec:
             - name: grader-setup-pvc
               mountPath: /illumidesk-courses
               subPath: illumidesk-courses
+            - name: illumidesk-shared
+              mountPath: /illumidesk-nb-exchange
       serviceAccountName: illumidesk-account
       volumes:
         - name: grader-setup-pvc
           persistentVolumeClaim:
             claimName: grader-setup-pvc
+        - name: illumidesk-shared
+          persistentVolumeClaim:
+            claimName: exchange-shared-volume
