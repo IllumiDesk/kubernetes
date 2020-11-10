@@ -19,10 +19,12 @@ logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 
-NAMESPACE = 'default'
+NAMESPACE = os.environ.get('ILLUMIDESK_K8S_NAMESPACE', 'default')
 GRADER_IMAGE_NAME = os.environ.get('GRADER_IMAGE_NAME', 'illumidesk/grader-notebook:latest')
 MNT_ROOT = os.environ.get('ILLUMIDESK_MNT_ROOT', '/illumidesk-courses')
 EXCHANGE_MNT_ROOT = os.environ.get('ILLUMIDESK_NB_EXCHANGE_MNT_ROOT', '/illumidesk-nb-exchange')
+GRADER_PVC = os.environ.get('GRADER_PVC', 'grader-setup-pvc')
+GRADER_EXCHANGE_SHARED_PVC = os.environ.get('GRADER_SHARED_PVC', 'exchange-shared-volume')
 
 
 # NBGrader DATABASE settings
@@ -197,12 +199,12 @@ class GraderServiceLauncher:
             volume_mounts=[
                 client.V1VolumeMount(
                     mount_path=f'/home/{self.grader_name}',
-                    name='grader-setup-pvc',
+                    name=GRADER_PVC,
                     sub_path=sub_path_grader_home
                 ),
                 client.V1VolumeMount(
                     mount_path='/srv/nbgrader/exchange',
-                    name='illumidesk-shared',
+                    name=GRADER_EXCHANGE_SHARED_PVC,
                     sub_path=sub_path_exchange
                 )
             ]
@@ -219,12 +221,12 @@ class GraderServiceLauncher:
                 security_context=client.V1PodSecurityContext(run_as_user=0),
                 volumes=[
                     client.V1Volume(
-                        name='grader-setup-pvc',
-                        persistent_volume_claim=client.V1PersistentVolumeClaimVolumeSource(claim_name='grader-setup-pvc')
+                        name=GRADER_PVC,
+                        persistent_volume_claim=client.V1PersistentVolumeClaimVolumeSource(claim_name=GRADER_PVC)
                     ),
                     client.V1Volume(
-                        name='illumidesk-shared',
-                        persistent_volume_claim=client.V1PersistentVolumeClaimVolumeSource(claim_name='exchange-shared-volume')
+                        name=GRADER_EXCHANGE_SHARED_PVC,
+                        persistent_volume_claim=client.V1PersistentVolumeClaimVolumeSource(claim_name=GRADER_EXCHANGE_SHARED_PVC)
                     ),
                     
                 ]

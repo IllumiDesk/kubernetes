@@ -120,6 +120,14 @@ spec:
               value: 'postgres'
             - name: POSTGRES_NBGRADER_PASSWORD
               value: '3onGcasS2C'
+            - name: ILLUMIDESK_MNT_ROOT
+              value: '/illumidesk-courses'
+            - name: ILLUMIDESK_K8S_NAMESPACE
+              value: 'illumidesk'
+            - name: GRADER_PVC
+              value: 'grader-setup-pvc'
+            - name: GRADER_SHARED_PVC
+              value: 'exchange-shared-volume'
           volumeMounts:
             - name: grader-setup-pvc
               mountPath: /illumidesk-courses
