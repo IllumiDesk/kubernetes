@@ -123,7 +123,7 @@ spec:
             - name: ILLUMIDESK_MNT_ROOT
               value: '/illumidesk-courses'
             - name: ILLUMIDESK_K8S_NAMESPACE
-              value: 'illumidesk'
+              value: 'default'
             - name: GRADER_PVC
               value: 'grader-setup-pvc'
             - name: GRADER_SHARED_PVC
