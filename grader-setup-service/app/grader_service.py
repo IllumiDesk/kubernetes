@@ -18,16 +18,19 @@ from .constants import NBGRADER_COURSE_CONFIG_TEMPLATE
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-
+# namespace to deploy new pods
 NAMESPACE = os.environ.get('ILLUMIDESK_K8S_NAMESPACE', 'default')
+# image name for grader-notebooks
 GRADER_IMAGE_NAME = os.environ.get('GRADER_IMAGE_NAME', 'illumidesk/grader-notebook:latest')
+# mount root path for grader and course home directories
 MNT_ROOT = os.environ.get('ILLUMIDESK_MNT_ROOT', '/illumidesk-courses')
+# shared directory to use with students and instructors
 EXCHANGE_MNT_ROOT = os.environ.get('ILLUMIDESK_NB_EXCHANGE_MNT_ROOT', '/illumidesk-nb-exchange')
 GRADER_PVC = os.environ.get('GRADER_PVC', 'grader-setup-pvc')
 GRADER_EXCHANGE_SHARED_PVC = os.environ.get('GRADER_SHARED_PVC', 'exchange-shared-volume')
 
 
-# NBGrader DATABASE settings
+# NBGrader DATABASE settings to save in nbgrader_config.py file
 nbgrader_db_host = os.environ.get('POSTGRES_NBGRADER_HOST')
 nbgrader_db_password = os.environ.get('POSTGRES_NBGRADER_PASSWORD')
 nbgrader_db_user = os.environ.get('POSTGRES_NBGRADER_USER')
@@ -35,8 +38,14 @@ nbgrader_db_user = os.environ.get('POSTGRES_NBGRADER_USER')
 
 class GraderServiceLauncher:
     def __init__(self, org_name: str, course_id: str):
-        # try to load the cluster credentials
+        """
+        Helper class to launch grader notebooks within the kubernetes cluster
+        
+        Args:
+            org_name: 
+        """
         try:
+            # try to load the cluster credentials
             # Configs can be set in Configuration class directly or using helper utility
             config.load_incluster_config()
         except ConfigException:
@@ -73,7 +82,7 @@ class GraderServiceLauncher:
     
     def grader_service_exists(self) -> bool:
         """
-        Check if there is a deployment for the grader service name
+        Check if the grader service exists
         """
         # Filter deployments by the current namespace and a specific name (metadata collection)
         service_list = self.coreV1Api.list_namespaced_service(
@@ -252,6 +261,9 @@ class GraderServiceLauncher:
             self.apps_v1.delete_namespaced_deployment(name=self.grader_name, namespace=NAMESPACE)
 
     def update_jhub_deployment(self):
+        """
+        Executes a patch in the jhub deployment. With this the jhub will be replaced with a new pod
+        """
         jhub_deployments = self.apps_v1.list_namespaced_deployment(
             namespace=NAMESPACE,
             label_selector='component=hub'
