@@ -199,7 +199,7 @@ class GraderServiceLauncher:
                 client.V1EnvVar(name='JUPYTERHUB_SERVICE_PREFIX', value=f'/services/{self.course_id}/'),
                 client.V1EnvVar(name='JUPYTERHUB_CLIENT_ID', value=f'service-{self.course_id}'),
                 client.V1EnvVar(name='JUPYTERHUB_USER', value=self.grader_name),
-                client.V1EnvVar(name='NB_GRADER_UID', value='10001'),
+                client.V1EnvVar(name='NB_UID', value='10001'),
                 client.V1EnvVar(name='NB_GID', value='100'),
                 client.V1EnvVar(name='NB_USER', value=self.grader_name),
                 # todo: validate if this env var is still required
