@@ -29,6 +29,10 @@ EXCHANGE_MNT_ROOT = os.environ.get('ILLUMIDESK_NB_EXCHANGE_MNT_ROOT', '/illumide
 GRADER_PVC = os.environ.get('GRADER_PVC', 'grader-setup-pvc')
 GRADER_EXCHANGE_SHARED_PVC = os.environ.get('GRADER_SHARED_PVC', 'exchange-shared-volume')
 
+# user UI and GID to use within the grader container
+NB_UID = 10001
+NB_GID = 100
+
 
 # NBGrader DATABASE settings to save in nbgrader_config.py file
 nbgrader_db_host = os.environ.get('POSTGRES_NBGRADER_HOST')
@@ -126,22 +130,20 @@ class GraderServiceLauncher:
         - grader_root: /<org-name>/home/grader-<course-id>
         - course_root: /<org-name>/home/grader-<course-id>/<course-id>
         """
-        uid = 10001
-        gid = 100
         logger.debug(
-            f'Create course directory "{self.course_dir}" with special permissions {uid}:{gid}'
+            f'Create course directory "{self.course_dir}" with special permissions {NB_UID}:{NB_GID}'
         )
         self.course_dir.mkdir(parents=True, exist_ok=True)
         # change the course directory owner
-        shutil.chown(str(self.course_dir), user=uid, group=gid)
+        shutil.chown(str(self.course_dir), user=NB_UID, group=NB_GID)
         # change the grader-home directory owner
-        shutil.chown(str(self.course_dir.parent), user=uid, group=gid)
+        shutil.chown(str(self.course_dir.parent), user=NB_UID, group=NB_GID)
     
     def _create_nbgrader_files(self):
         # create the .jupyter directory (a child of grader_root)
         jupyter_dir = self.course_dir.parent.joinpath('.jupyter')
         jupyter_dir.mkdir(parents=True, exist_ok=True)
-        shutil.chown(str(jupyter_dir), user=10001, group=100)
+        shutil.chown(str(jupyter_dir), user=NB_UID, group=NB_GID)
         # Write the nbgrader_config.py file at grader home directory
         grader_nbconfig_path = jupyter_dir.joinpath('nbgrader_config.py')
         logger.info(f'Writing the nbgrader_config.py file at jupyter directory (within the grader home): {grader_nbconfig_path}')
@@ -199,8 +201,8 @@ class GraderServiceLauncher:
                 client.V1EnvVar(name='JUPYTERHUB_SERVICE_PREFIX', value=f'/services/{self.course_id}/'),
                 client.V1EnvVar(name='JUPYTERHUB_CLIENT_ID', value=f'service-{self.course_id}'),
                 client.V1EnvVar(name='JUPYTERHUB_USER', value=self.grader_name),
-                client.V1EnvVar(name='NB_UID', value='10001'),
-                client.V1EnvVar(name='NB_GID', value='100'),
+                client.V1EnvVar(name='NB_UID', value=str(NB_UID)),
+                client.V1EnvVar(name='NB_GID', value=str(NB_GID)),
                 client.V1EnvVar(name='NB_USER', value=self.grader_name),
                 # todo: validate if this env var is still required
                 client.V1EnvVar(name='USER_ROLE', value='Grader'),
