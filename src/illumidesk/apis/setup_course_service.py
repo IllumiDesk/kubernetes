@@ -22,17 +22,26 @@ SERVICE_BASE_URL = f'http://{INTENAL_SERVICE_NAME}:{SERVICE_PORT}'
 SERVICE_COMMON_HEADERS = {'Content-Type': 'application/json'}
 
 
-def get_current_service_definitions() -> str:
+async def create_assignment_source_dir(org_name: str, course_id: str, assignment_name: str) -> Bool:
     """
-    Gets the file content that contains the new services and groups that are used as grader services
+    Calls the grader setup service to create the assignment source directory
 
-    Returns: the contents of configuration file
+    returns: True when the service response is 200
     """
-    # get the response from service config endpoint
-    response = requests.get(f'{SERVICE_BASE_URL}/config')
-    # store course setup configuration
-    config = response.json()
-    return config
+    client = AsyncHTTPClient()
+    try:
+        response = await client.fetch(
+            f'{SERVICE_BASE_URL}/courses/{org_name}/{course_id}/{assignment_name}',
+            headers=SERVICE_COMMON_HEADERS,
+            body='',
+            method='POST',
+        )
+        logger.debug(f'Grader-setup service response: {response.body}')
+        return True
+    except HTTPError as e:
+        # HTTPError is raised for non-200 responses
+        logger.error(f'Grader-setup service returned an error: {e}')
+        return False
 
 
 async def register_new_service(org_name: str, course_id: str) -> Bool:
@@ -59,14 +68,3 @@ async def register_new_service(org_name: str, course_id: str) -> Bool:
         # the response can be found in e.response.
         logger.error(f'Grader-setup service returned an error: {e}')
         return False
-
-
-def make_rolling_update() -> None:
-    """
-    Triggers the rolling-update request BUT without wait for the response.
-    It's very important to understand that we not have to wait 'cause the current process/jupyterhub will be killed
-    """
-    client = AsyncHTTPClient()
-    url = f'{SERVICE_BASE_URL}/rolling-update'
-    # WE'RE NOT USING <<<AWAIT>>> because the rolling update should occur later
-    client.fetch(url, headers=SERVICE_COMMON_HEADERS, body='', method='POST')
