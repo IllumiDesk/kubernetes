@@ -22,6 +22,7 @@ nbgrader_db_host = os.environ.get('POSTGRES_NBGRADER_HOST')
 nbgrader_db_port = os.environ.get('POSTGRES_NBGRADER_PORT') or 5432
 nbgrader_db_password = os.environ.get('POSTGRES_NBGRADER_PASSWORD')
 nbgrader_db_user = os.environ.get('POSTGRES_NBGRADER_USER')
+MNT_ROOT = os.environ.get('ILLUMIDESK_MNT_ROOT', '/illumidesk-courses')
 
 org_name = os.environ.get('ORGANIZATION_NAME') or 'my-org'
 
@@ -61,7 +62,7 @@ class NbGraderServiceHelper:
             raise ValueError('course_id missing')
 
         self.course_id = LTIUtils().normalize_string(course_id)
-        self.course_dir = f'/home/grader-{self.course_id}/{self.course_id}'
+        self.course_dir = f'{MNT_ROOT}/{org_name}/home/grader-{self.course_id}/{self.course_id}'
         self.uid = int(os.environ.get('NB_GRADER_UID') or '10001')
         self.gid = int(os.environ.get('NB_GID') or '100')
 

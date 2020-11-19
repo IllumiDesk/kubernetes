@@ -419,6 +419,5 @@ def process_additional_steps_for_resource_launch(
     nbgrader_service = NbGraderServiceHelper(course_id, True)
     nbgrader_service.update_course(lms_lineitems_endpoint=course_lineitems)
     if resource_link_title:
-        # resource_link_title_normalize = lti_utils.normalize_string(resource_link_title)
         logger.debug('Creating a new assignment from the Authentication flow with title %s' % resource_link_title)
-        # nbgrader_service.create_assignment_in_nbgrader(resource_link_title)
+        nbgrader_service.create_assignment_in_nbgrader(resource_link_title)
