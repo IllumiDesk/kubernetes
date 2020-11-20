@@ -127,8 +127,7 @@ class NbGraderServiceHelper:
             InvalidEntry: when there was an error adding the assignment to the database
         """
         if not assignment_name:
-            raise ValueError('assignment_name missing')
-        assignment_name = LTIUtils().normalize_string(assignment_name)
+            raise ValueError('assignment_name missing')        
         logger.debug('Assignment name normalized %s to save in gradebook' % assignment_name)
         assignment = None
         with Gradebook(self.db_url, course_id=self.course_id) as gb:

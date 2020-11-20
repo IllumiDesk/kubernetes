@@ -420,8 +420,9 @@ async def process_resource_link(
     nbgrader_service = NbGraderServiceHelper(course_id, True)
     nbgrader_service.update_course(lms_lineitems_endpoint=course_lineitems)
     if resource_link_title:
-        logger.debug('Creating a new assignment from the Authentication flow with title %s' % resource_link_title)
+        assignment_name = LTIUtils().normalize_string(resource_link_title)
+        logger.debug('Creating a new assignment from the Authentication flow with title %s' % assignment_name)
         # register the new assignment in nbgrader database
-        nbgrader_service.register_assignment(resource_link_title)
+        nbgrader_service.register_assignment(assignment_name)
         # create the assignment source directory by calling the grader-setup service
-        await create_assignment_source_dir(ORG_NAME, course_id, resource_link_title)
+        await create_assignment_source_dir(ORG_NAME, course_id, assignment_name)
